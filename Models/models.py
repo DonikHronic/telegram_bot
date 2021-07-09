@@ -1,7 +1,8 @@
 from datetime import datetime
 from peewee import *
+from config import DB_PATH
 
-db = SqliteDatabase('bot_db.sql')
+db = SqliteDatabase(DB_PATH)
 
 
 class BaseModel(Model):
@@ -88,6 +89,7 @@ class Order(BaseModel):
 	period = DateTimeField()
 	product = ForeignKeyField(Product)
 	status = ForeignKeyField(Status)
+	refuse = BooleanField(default=False)
 
 	def add_order(self, params: dict):
 		client = Client.get(Client.user.user_id == params['client_id'])
