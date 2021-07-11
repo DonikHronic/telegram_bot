@@ -1,0 +1,31 @@
+COMMANDS_LIST = {
+	'bot_started': 'Бот Запущен.',
+	'start': 'Приветствую в боте.',
+	'registration': 'Регистрация',
+	'exist_registration': 'Вы уже зарегистрированы в системе',
+	'show_actions': 'Можете просмотреть действия командой /menu',
+	'choose_action': 'Выберите действие которое хотите выплонить',
+	'fail_registration': 'При регистрации возникла ошибка. Пожалуйта попробуйте снова',
+	'success_registration': 'Регистрация завершена',
+	'registration_client': 'Регистрация клиента',
+	'set_name': 'Введите имя!',
+	'set_surname': 'Введите фамилию',
+	'set_patronymic': 'Введите отчество',
+	'set_email': 'Введите email',
+	'set_phone': 'Введите номер телефона',
+	'set_key': 'Введите секретный ключ',
+	'fail_key': 'Ключ неверный. Обратитесь к администратору',
+	'client': 'Я клиент',
+	'buyer': 'Я закупщик',
+}
+
+MENU_COMMANDS = {
+	'add_order': 'Добавить заявку',
+	'my_orders': 'Мои заявки',
+	'refuse_order': 'Отмена заявки',
+	'connect_buyer': 'Связь с закупщиком',
+	'show_orders': 'Вывод заявок',
+	'orders_history': 'Вывод заявок',
+	'change_status': 'Изменение статуса заявки',
+	'refused_orders': 'Отмененные заявки',
+}

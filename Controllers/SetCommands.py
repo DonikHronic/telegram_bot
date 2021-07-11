@@ -6,7 +6,7 @@ class DefaultCommands:
 		('start', 'Запустить бота'),
 		('help', 'Вывести справку'),
 		('cal', 'календарь'),
-		('menu', 'Вывести список действий'),
+		('menu_client', 'Вывести список действий'),
 	]
 
 	async def set_default_commands(self, dispatcher: Dispatcher):

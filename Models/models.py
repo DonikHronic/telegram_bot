@@ -1,6 +1,7 @@
 from datetime import datetime
 from peewee import *
 from config import DB_PATH
+from loader import bot_logger
 
 db = SqliteDatabase(DB_PATH)
 
@@ -23,13 +24,17 @@ class User(BaseModel):
 			email=params['email'],
 			phone_number=params['phone']
 		)
+		bot_logger.info(f'Added new user: {params["name"]}')
 		return pers
 
 	def is_exist(self, user_id):
-		user = self.select().where(User.user_id == user_id)
-		if user.exists():
-			return True
-		return False
+		try:
+			user = self.select().where(User.user_id == user_id)
+			if user.exists():
+				return True
+			return False
+		except Exception as ex:
+			bot_logger.exception(ex)
 
 
 class Person(BaseModel):
@@ -46,7 +51,11 @@ class Person(BaseModel):
 			second_name=params['surname'],
 			patronymic=params['patronymic']
 		)
+		bot_logger.info('Register new person')
 		return person
+
+	def check_person(self, user_id):
+		pass
 
 	class Meta:
 		database = db
@@ -116,6 +125,12 @@ class History(BaseModel):
 class SecretKey(BaseModel):
 	key = CharField()
 	buyer = ForeignKeyField(Buyer)
+
+	def check_key(self, key: str):
+		secret_key = self.select().where(SecretKey.key == key).get()
+		if secret_key.exist():
+			return True
+		return False
 
 
 if __name__ == '__main__':
