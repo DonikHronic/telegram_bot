@@ -9,7 +9,7 @@ menu_client = ReplyKeyboardMarkup(
 			KeyboardButton(text=MENU_COMMANDS["my_orders"])
 		],
 		[
-			KeyboardButton(text=MENU_COMMANDS["refuse_orders"]),
+			KeyboardButton(text=MENU_COMMANDS["refuse_order"]),
 			KeyboardButton(text=MENU_COMMANDS["connect_buyer"])
 		]
 	],

@@ -2,4 +2,6 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 
 
 class MakeOrder(StatesGroup):
-	pass
+	choose_product = State()
+	search_product = State()
+	set_count = State()

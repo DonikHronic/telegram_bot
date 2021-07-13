@@ -55,7 +55,12 @@ class Person(BaseModel):
 		return person
 
 	def check_person(self, user_id):
-		pass
+		id_user = User.get(User.user_id == user_id)
+		buyers = self.select().where(self.user == id_user.id)
+		if buyers.exists():
+			return True
+
+		return False
 
 	class Meta:
 		database = db
@@ -127,8 +132,8 @@ class SecretKey(BaseModel):
 	buyer = ForeignKeyField(Buyer)
 
 	def check_key(self, key: str):
-		secret_key = self.select().where(SecretKey.key == key).get()
-		if secret_key.exist():
+		secret_key = self.select().where(SecretKey.key == key)
+		if secret_key.exists():
 			return True
 		return False
 

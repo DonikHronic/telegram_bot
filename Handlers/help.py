@@ -8,7 +8,7 @@ from loader import dp
 async def help_handle(message: types.Message):
 	help_text = '''
 					Список команд:
-					\t/start - начать диалог
-					\t/help - вызов справки
+					\t/start - Запуск бота
+					\t/help - Вызов справки
 				'''
 	await message.answer(help_text)
