@@ -106,21 +106,24 @@ class Order(BaseModel):
 	refuse = BooleanField(default=False)
 
 	def add_order(self, params: dict):
-		client = Client.get(Client.user.user_id == params['client_id'])
+		user_id = User.get(User.user_id == params['client_id'])
+
+		client = Client.get(Client.user == user_id)
 		buyer = Buyer.get(Buyer.id == 1)
-		product = Product.get(Product.product_name == params['product_name'] and Product.count == params['count'])
-		status = Status.get(Status.status_name == params['status'])
-		period = datetime.strptime(params['period'], '%Y-%m-%d')
+		product = Product.get(Product.id == params['product_id'])
 
 		self.create(
 			client=client.id,
 			buyer=buyer.id,
 			comment=params['comment'],
 			count=params['count'],
-			period=period,
+			period=params['period'],
 			product=product.id,
-			status=status.id,
+			status=Status.STATUS_LIST[0][0],
 		)
+
+	def change_status(self):
+		pass
 
 
 class History(BaseModel):

@@ -5,3 +5,5 @@ class MakeOrder(StatesGroup):
 	choose_product = State()
 	search_product = State()
 	set_count = State()
+	set_deadline = State()
+	add_comment = State()

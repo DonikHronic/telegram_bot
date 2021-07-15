@@ -15,10 +15,9 @@ async def add_order(message: types.Message, state: FSMContext):
 	for item in items:
 		msg += f'{item.id} - {item.product_name}\n'
 
-	products_count = len(msg.split('\n'))
+	products_count = len(msg.split('\n')) - 1
 	await state.update_data(products_count=products_count)
 	await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
-	await asyncio.sleep(3)
 	await message.answer(INFO_LIST["choose_product"])
 	await MakeOrder.choose_product.set()
 
