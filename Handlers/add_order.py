@@ -6,7 +6,7 @@ from telegram_bot_calendar import DetailedTelegramCalendar
 
 from Models.models import Product, Order
 from commands import INFO_LIST, WARNING_LIST, ERROR_LIST, SUCCESS_LIST
-from loader import dp, bot
+from loader import dp, bot, bot_logger
 from states.make_order import MakeOrder
 
 
@@ -79,5 +79,11 @@ async def add_comment(message: types.Message, state: FSMContext):
 		'comment': data["comment"],
 	}
 
-	order.add_order(params)
-	await message.answer(SUCCESS_LIST["order_added"])
+	try:
+		order.add_order(params)
+		await message.answer(SUCCESS_LIST["order_added"])
+		await state.finish()
+	except Exception as ex:
+		bot_logger.exception(ex)
+		await message.answer(ERROR_LIST["order_adding_fail"])
+		await state.finish()

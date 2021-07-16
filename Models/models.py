@@ -111,6 +111,7 @@ class Order(BaseModel):
 		client = Client.get(Client.user == user_id)
 		buyer = Buyer.get(Buyer.id == 1)
 		product = Product.get(Product.id == params['product_id'])
+		status = Status.get(Status.status_name == Status.STATUS_LIST[0][1])
 
 		self.create(
 			client=client.id,
@@ -119,7 +120,7 @@ class Order(BaseModel):
 			count=params['count'],
 			period=params['period'],
 			product=product.id,
-			status=Status.STATUS_LIST[0][0],
+			status=status,
 		)
 
 	def change_status(self):

@@ -1,5 +1,4 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from Keyboards.inline.callback_datas import user_choice
 from commands import INFO_LIST
 
 choice = InlineKeyboardMarkup(row_width=2)
