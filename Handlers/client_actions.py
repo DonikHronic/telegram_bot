@@ -38,36 +38,29 @@ async def my_orders(message: types.Message):
 		orders_for_confirm = []
 		for order in orders:
 			if order.status.status_name != Status.STATUS_LIST[2][1]:
-				if order.product_id == 0:
-					msg += f'''{order.id} - {order.comment}
-Количество: {order.count}
-Статус: {order.status.status_name}\n'''
-					msg += f'\n{"":=<15}\n\n'
-				else:
-					msg += f'''{order.id} - {order.product.product_name}
-Количество: {order.count}
-Статус: {order.status.status_name}\n'''
-					msg += f'\n{"":=<15}\n\n'
+				msg += f'''
+					{order.id} - {order.product.product_name}
+					Количество: {order.count}
+					Статус: {order.status.status_name}
+					Комментарий: {order.comment}
+				'''
+				msg += f'\n{"":=<25}\n\n'
 			else:
-				if order.product_id == 0:
-					mess = f'''
-										{order.id} - {order.product.product_name}
-Количество: {order.count}
-Статус: {order.status.status_name}'''
-					orders_for_confirm.append(mess)
-				else:
-					mess = f'''
-						{order.id} - {order.product.product_name}
-Количество: {order.count}
-Статус: {order.status.status_name}'''
-					orders_for_confirm.append(mess)
+				mess = f'''
+					{order.id} - {order.product.product_name}
+					Количество: {order.count}
+					Статус: {order.status.status_name}
+					Комментарий: {order.comment}
+				'''
+				orders_for_confirm.append(mess)
 
 		if len(msg) != 0:
 			await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
 
 		for order in orders_for_confirm:
 			await message.answer(order, reply_markup=confirm)
-
+	except MessageTextIsEmpty:
+		await message.answer(WARNING_LIST["not_have_orders"])
 	except Exception as ex:
 		bot_logger.exception(ex)
 		await message.answer(ERROR_LIST["fail_show_orders"])
@@ -81,21 +74,17 @@ async def refuse_order(message: types.Message):
 		msg = ''
 		for order in orders:
 			if order.status.status_name != Status.STATUS_LIST[2][1] and order.status.status_name != Status.STATUS_LIST[3][1]:
-				if order.product_id == 0:
-					msg += f'''{order.id} - {order.comment}
-Количество: {order.count}
-Статус: {order.status.status_name}\n'''
-					msg += f'\n{"":=<15}\n\n'
-				else:
-					msg += f'''{order.id} - {order.product.product_name}
-Количество: {order.count}
-Статус: {order.status.status_name}\n'''
-					msg += f'\n{"":=<15}\n\n'
+				msg += f'''{order.id} - {order.product.product_name}
+					Количество: {order.count}
+					Статус: {order.status.status_name}
+					Комментарий: {order.comment}
+				'''
+				msg += f'\n{"":=<25}\n\n'
 		await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
 		await message.answer(INFO_LIST["set_order_id"])
 		await Refusing.set_order_id.set()
 	except MessageTextIsEmpty:
-		await message.answer(WARNING_LIST["not_have_orders"], reply_markup=types.ReplyKeyboardRemove())
+		await message.answer(WARNING_LIST["not_have_orders_refuse"], reply_markup=types.ReplyKeyboardRemove())
 	except Exception as ex:
 		bot_logger.exception(ex)
 		await message.answer(ERROR_LIST["refuse_order"])

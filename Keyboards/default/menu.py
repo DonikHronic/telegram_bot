@@ -19,7 +19,7 @@ menu_client = ReplyKeyboardMarkup(
 menu_buyer = ReplyKeyboardMarkup(
 	keyboard=[
 		[
-			KeyboardButton(text=MENU_COMMANDS['show_orders']),
+			KeyboardButton(text=MENU_COMMANDS['show_orders_btn']),
 			KeyboardButton(text=MENU_COMMANDS['orders_history'])
 		],
 		[
