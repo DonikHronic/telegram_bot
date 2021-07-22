@@ -1,4 +1,3 @@
-from datetime import datetime
 from peewee import *
 from config import DB_PATH
 from loader import bot_logger
@@ -30,9 +29,7 @@ class User(BaseModel):
 	def is_exist(self, user_id):
 		try:
 			user = self.select().where(User.user_id == user_id)
-			if user.exists():
-				return True
-			return False
+			return user.exists()
 		except Exception as ex:
 			bot_logger.exception(ex)
 
@@ -57,10 +54,8 @@ class Person(BaseModel):
 	def check_person(self, user_id):
 		id_user = User.get(User.user_id == user_id)
 		buyers = self.select().where(self.user == id_user.id)
-		if buyers.exists():
-			return True
 
-		return False
+		return buyers.exists()
 
 	class Meta:
 		database = db
@@ -107,13 +102,12 @@ class Order(BaseModel):
 
 	def add_order(self, params: dict):
 		user_id = User.get(User.user_id == params['client_id'])
-
 		client = Client.get(Client.user == user_id)
 		buyer = Buyer.get(Buyer.id == 1)
 		product = Product.get(Product.id == params['product_id'])
 		status = Status.get(Status.status_name == Status.STATUS_LIST[0][1])
 
-		self.create(
+		order = self.create(
 			client=client.id,
 			buyer=buyer.id,
 			comment=params['comment'],
@@ -123,8 +117,7 @@ class Order(BaseModel):
 			status=status,
 		)
 
-	def change_status(self):
-		pass
+		return order
 
 
 class History(BaseModel):
@@ -136,10 +129,8 @@ class SecretKey(BaseModel):
 	buyer = ForeignKeyField(Buyer)
 
 	def check_key(self, key: str):
-		secret_key = self.select().where(SecretKey.key == key)
-		if secret_key.exists():
-			return True
-		return False
+		secret_key = self.select().where(SecretKey.key == key, SecretKey.buyer == 0)
+		return secret_key.exists()
 
 
 if __name__ == '__main__':

@@ -12,23 +12,21 @@ from states.make_order import MakeOrder
 from states.refusing_order import Refusing
 
 
+# ========================= ДОБАВЛЕНИЕ ЗАЯВКИ =============================
 @dp.message_handler(text=MENU_COMMANDS["add_order"])
-async def add_order(message: types.Message, state: FSMContext):
+async def add_order(message: types.Message):
 	items = Product.select()
 	msg = ''
 	for item in items:
-		if item.id == 0:
-			continue
-		else:
+		if not item.id:
 			msg += f'{item.id} - {item.product_name}\n'
 
-	products_count = len(msg.split('\n')) - 1
-	await state.update_data(products_count=products_count)
 	await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
 	await message.answer(INFO_LIST["choose_product"])
 	await MakeOrder.choose_product.set()
 
 
+# ========================= МОИ ЗАЯВКИ =============================
 @dp.message_handler(text=MENU_COMMANDS["my_orders"])
 async def my_orders(message: types.Message):
 	try:
@@ -37,14 +35,14 @@ async def my_orders(message: types.Message):
 		msg = ''
 		orders_for_confirm = []
 		for order in orders:
-			if order.status.status_name != Status.STATUS_LIST[2][1]:
+			if order.status.status_name not in Status.STATUS_LIST[2][1]:
 				msg += f'''
 					{order.id} - {order.product.product_name}
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					\n{"":=<25}\n\n
 				'''
-				msg += f'\n{"":=<25}\n\n'
 			else:
 				mess = f'''
 					{order.id} - {order.product.product_name}
@@ -54,8 +52,7 @@ async def my_orders(message: types.Message):
 				'''
 				orders_for_confirm.append(mess)
 
-		if len(msg) != 0:
-			await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
+		await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
 
 		for order in orders_for_confirm:
 			await message.answer(order, reply_markup=confirm)
@@ -66,6 +63,7 @@ async def my_orders(message: types.Message):
 		await message.answer(ERROR_LIST["fail_show_orders"])
 
 
+# ========================= ОТМЕНИТЬ ЗАЯВКУ =============================
 @dp.message_handler(text=MENU_COMMANDS["refuse_order"])
 async def refuse_order(message: types.Message):
 	try:
@@ -78,8 +76,8 @@ async def refuse_order(message: types.Message):
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					\n{"":=<25}\n\n
 				'''
-				msg += f'\n{"":=<25}\n\n'
 		await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
 		await message.answer(INFO_LIST["set_order_id"])
 		await Refusing.set_order_id.set()
@@ -118,11 +116,13 @@ async def yes_confirm(call: CallbackQuery, state: FSMContext):
 	await state.finish()
 
 
+# ========================= СВЯЗАТЬСЯ С ЗАКУПШИКОМ =============================
 @dp.message_handler(text=MENU_COMMANDS["connect_buyer"])
 async def connect_buyer(message: types.Message):
 	await message.answer('@Shamshodkhon', reply_markup=types.ReplyKeyboardRemove())
 
 
+# ========================= ПОДТВЕРДИТЬ ПОЛУЧЕНИЕ ЗАЯВКИ =============================
 @dp.callback_query_handler(text='confirm')
 async def confirm_order(call: CallbackQuery, state: FSMContext):
 	await call.answer(cache_time=60)

@@ -5,7 +5,6 @@ class DefaultCommands:
 	commands_list = [
 		('start', 'Запустить бота'),
 		('help', 'Вывести справку'),
-		('cal', 'календарь'),
 		('menu', 'Вывести список действий'),
 	]
 

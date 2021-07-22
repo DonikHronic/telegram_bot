@@ -109,7 +109,7 @@ async def email_handler(message: types.Message, state: FSMContext):
 		try:
 			user.add_new_user(user_params)
 
-			if data['role'] == 'client':
+			if 'client' in data['role']:
 				client = Client()
 				client.add_person(person_params)
 			else:

@@ -132,3 +132,4 @@ dmypy.json
 config.py
 probe.py
 /bot_db.sql
+.idea

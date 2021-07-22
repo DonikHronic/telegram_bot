@@ -4,6 +4,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery
 from telegram_bot_calendar import DetailedTelegramCalendar
 
+from Exceptions.ecxeptions import BotExceptions
 from Models.models import Product, Order
 from commands import INFO_LIST, WARNING_LIST, ERROR_LIST, SUCCESS_LIST
 from loader import dp, bot, bot_logger
@@ -12,10 +13,10 @@ from states.make_order import MakeOrder
 
 @dp.message_handler(state=MakeOrder.choose_product)
 async def choose_product(message: types.Message, state: FSMContext):
-	data = await state.get_data()
+	products_count = Product.select().count()
 	try:
 		number = int(message.text)
-		if number <= data['products_count']:
+		if number <= products_count:
 			product = Product.get(Product.id == number)
 			await state.update_data(product_id=product.id)
 			await message.answer(INFO_LIST["selected_product"].format(product.product_name))
@@ -43,10 +44,14 @@ async def choose_product(message: types.Message, state: FSMContext):
 async def set_count(message: types.Message, state: FSMContext):
 	try:
 		product_count = int(message.text)
+		if not product_count:
+			raise BotExceptions.ZeroCount
 		await state.update_data(count=product_count)
 		calendar, step = DetailedTelegramCalendar().build()
 		await message.answer(INFO_LIST["set_limit"], reply_markup=calendar)
 		await MakeOrder.set_deadline.set()
+	except BotExceptions.ZeroCount:
+		await message.answer(ERROR_LIST["zero_count"])
 	except ValueError:
 		await message.answer(ERROR_LIST["fail_count"])
 
