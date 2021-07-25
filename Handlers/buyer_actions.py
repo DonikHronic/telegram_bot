@@ -1,7 +1,10 @@
+import re
+
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ReplyKeyboardRemove, CallbackQuery
 from aiogram.utils.exceptions import MessageTextIsEmpty
+from peewee import DoesNotExist
 
 from Exceptions.ecxeptions import BotExceptions
 from Keyboards.inline.callback_datas import buyer_order_show
@@ -48,6 +51,9 @@ async def show_all_orders(call: CallbackQuery):
 		await call.message.answer(msg)
 	except MessageTextIsEmpty:
 		await call.message.answer(WARNING_LIST["not_have_orders"])
+	except Exception as ex:
+		await call.message.answer(ERROR_LIST['general_fail'])
+		bot_logger.exception(ex)
 
 
 # ========================= ФИЛТРАЦИЯ ЗАВЕРШЁННЫХ ЗАЯВОК =============================
@@ -72,6 +78,9 @@ async def show_complete_orders(call: CallbackQuery):
 		await call.message.answer(msg)
 	except MessageTextIsEmpty:
 		await call.message.answer(WARNING_LIST["not_have_orders"])
+	except Exception as ex:
+		await call.message.answer(ERROR_LIST['general_fail'])
+		bot_logger.exception(ex)
 
 
 # ========================= ФИЛТРАЦИЯ НОВЫХ ЗАЯВОК =============================
@@ -96,6 +105,9 @@ async def show_complete_orders(call: CallbackQuery):
 		await call.message.answer(msg)
 	except MessageTextIsEmpty:
 		await call.message.answer(WARNING_LIST["not_have_orders"])
+	except Exception as ex:
+		await call.message.answer(ERROR_LIST['general_fail'])
+		bot_logger.exception(ex)
 
 
 # ========================= ВЫВОД ИСТОРИИ ЗАЯВОК =============================
@@ -119,6 +131,9 @@ async def orders_history(message: types.Message):
 		await message.answer(msg, reply_markup=ReplyKeyboardRemove())
 	except MessageTextIsEmpty:
 		await message.answer(WARNING_LIST["not_have_orders"], reply_markup=ReplyKeyboardRemove())
+	except Exception as ex:
+		await message.answer(ERROR_LIST['general_fail'])
+		bot_logger.exception(ex)
 
 
 # ========================= ВЫВОД ОТМЕНЁННЫХ ЗАЯВОК =============================
@@ -142,6 +157,9 @@ async def refused_orders(message: types.Message):
 		await message.answer(msg, reply_markup=ReplyKeyboardRemove())
 	except MessageTextIsEmpty:
 		await message.answer(WARNING_LIST["not_have_orders"], reply_markup=ReplyKeyboardRemove())
+	except Exception as ex:
+		await message.answer(ERROR_LIST['general_fail'])
+		bot_logger.exception(ex)
 
 
 # ========================= ИЗМЕНЕНИЕ СТАТУСА ЗАЯВКИ =============================
@@ -153,31 +171,40 @@ async def change_status(message: types.Message):
 			Status.status_name != Status.STATUS_LIST[-1][1] and Order.refuse == False)
 		for order in orders:
 			msg += f'''{order.id} - {order.product.product_name}
-							Количество: {order.count}
-							Статус: {order.status.status_name}
-							Комментарий: {order.comment}
-							\n{"":=<25}\n\n
-						'''
+						Количество: {order.count}
+						Статус: {order.status.status_name}
+						Комментарий: {order.comment}
+						\n{"":=<25}\n\n
+					'''
 		await message.answer(msg, reply_markup=ReplyKeyboardRemove())
 		await message.answer(INFO_LIST["change_edit_order"])
 		await ChangeStatus.set_order_id.set()
 	except MessageTextIsEmpty:
 		await message.answer(WARNING_LIST["not_have_orders"], reply_markup=ReplyKeyboardRemove())
+	except Exception as ex:
+		await message.answer(ERROR_LIST['general_fail'])
+		bot_logger.exception(ex)
 
 
 @dp.message_handler(state=ChangeStatus.set_order_id)
 async def set_status(message: types.Message, state: FSMContext):
+	re_num = r'\d+'
+
 	try:
-		order_id = int(message.text)
+		order_id = re.search(re_num, message.text)
 		if not order_id:
+			await message.answer(WARNING_LIST["invalid_order_id"])
+		elif not int(order_id[0]):
 			raise BotExceptions.ZeroCount
-		await state.update_data(order_id=order_id)
-		await message.answer(INFO_LIST["change_status"], reply_markup=statuses)
-		await ChangeStatus.confirm_status.set()
+		else:
+			order = Order.get_by_id(order_id[0])
+			await state.update_data(order_id=order_id[0])
+			await message.answer(INFO_LIST["change_status"], reply_markup=statuses)
+			await ChangeStatus.confirm_status.set()
 	except BotExceptions.ZeroCount:
 		await message.answer(ERROR_LIST["zero_order"])
-	except ValueError:
-		await message.answer(WARNING_LIST["invalid_order_id"])
+	except DoesNotExist:
+		await message.answer(WARNING_LIST["invalid_order"])
 
 
 @dp.callback_query_handler(state=ChangeStatus.confirm_status)

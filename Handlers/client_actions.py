@@ -1,7 +1,10 @@
+import re
+
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import CallbackQuery
 from aiogram.utils.exceptions import MessageTextIsEmpty
+from peewee import DoesNotExist
 
 from Keyboards.inline.confirm_button import confirm, check_confirm
 from Models.models import Product, User, Order, Client, Status
@@ -15,15 +18,18 @@ from states.refusing_order import Refusing
 # ========================= ДОБАВЛЕНИЕ ЗАЯВКИ =============================
 @dp.message_handler(text=MENU_COMMANDS["add_order"])
 async def add_order(message: types.Message):
-	items = Product.select()
-	msg = ''
-	for item in items:
-		if not item.id:
-			msg += f'{item.id} - {item.product_name}\n'
+	try:
+		items = Product.select()
+		msg = ''
+		for item in items:
+			if item.id:
+				msg += f'{item.id} - {item.product_name}\n'
 
-	await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
-	await message.answer(INFO_LIST["choose_product"])
-	await MakeOrder.choose_product.set()
+		await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
+		await message.answer(INFO_LIST["choose_product"])
+		await MakeOrder.choose_product.set()
+	except DoesNotExist:
+		await message.answer(INFO_LIST["empty_orders"])
 
 
 # ========================= МОИ ЗАЯВКИ =============================
@@ -71,7 +77,7 @@ async def refuse_order(message: types.Message):
 		orders = Order.select().where(Order.client == client.id, Order.refuse == 0)
 		msg = ''
 		for order in orders:
-			if order.status.status_name != Status.STATUS_LIST[2][1] and order.status.status_name != Status.STATUS_LIST[3][1]:
+			if order.status.status_name not in (Status.STATUS_LIST[2][1], Status.STATUS_LIST[3][1]):
 				msg += f'''{order.id} - {order.product.product_name}
 					Количество: {order.count}
 					Статус: {order.status.status_name}
@@ -91,12 +97,20 @@ async def refuse_order(message: types.Message):
 @dp.message_handler(state=Refusing.set_order_id)
 async def refusing_id(message: types.Message, state: FSMContext):
 	try:
-		order_id = int(message.text)
-		await state.update_data(order_id=order_id)
-		await message.answer(WARNING_LIST["check_refusing"], reply_markup=check_confirm)
-		await Refusing.confirm_refusing.set()
-	except ValueError:
-		await message.answer(WARNING_LIST["invalid_order_id"])
+		re_num = r'\d+'
+		order_id = re.search(re_num, message.text)
+		if not order_id:
+			await message.answer(WARNING_LIST["invalid_order_id"])
+		elif not order_id[0]:
+			await message.answer(ERROR_LIST["zero_order"])
+		else:
+			client = Client.select().join(User).where(User.user_id == message.from_user.id).get()
+			order = Order.get(Order.id == order_id[0], Order.client == client.id)
+			await state.update_data(order_id=order.id)
+			await message.answer(WARNING_LIST["check_refusing"], reply_markup=check_confirm)
+			await Refusing.confirm_refusing.set()
+	except DoesNotExist:
+		await message.answer(WARNING_LIST["invalid_order"])
 
 
 @dp.callback_query_handler(text='yes', state=Refusing.confirm_refusing)

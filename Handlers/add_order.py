@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -9,55 +10,90 @@ from Models.models import Product, Order
 from commands import INFO_LIST, WARNING_LIST, ERROR_LIST, SUCCESS_LIST
 from loader import dp, bot, bot_logger
 from states.make_order import MakeOrder
+re_num = r'\d+'
 
 
+# ========================= ВЫБОР НЕОБХОДИМОГО ПРОДУКТА =============================
 @dp.message_handler(state=MakeOrder.choose_product)
 async def choose_product(message: types.Message, state: FSMContext):
-	products_count = Product.select().count()
+	"""
+
+	:param message: types.Message
+	:param state: FSMContext
+	:return:
+	"""
 	try:
-		number = int(message.text)
-		if number <= products_count:
-			product = Product.get(Product.id == number)
+		product_id = re.search(re_num, message.text)
+
+		if product_id:
+			product = Product.get(Product.id == product_id[0])
 			await state.update_data(product_id=product.id)
 			await message.answer(INFO_LIST["selected_product"].format(product.product_name))
 			await message.answer(INFO_LIST["set_count"])
 			await MakeOrder.set_count.set()
 		else:
-			await message.answer(WARNING_LIST["invalid_product"])
+			await product_search(message, state)
 	except ValueError:
-		await message.answer(INFO_LIST["search_in_progress"])
-		products = Product.select().where(Product.product_name == message.text)
-
-		if not products.exists():
-			await message.answer(INFO_LIST["product_not_exist"])
-			await state.update_data(product_id=0)
-			await message.answer(INFO_LIST["set_count"])
-			await MakeOrder.set_count.set()
-		else:
-			msg = ''
-			for product in products:
-				msg += f'{product.id} - {product.product_name}\n'
-			await message.answer(msg)
+		await message.answer(WARNING_LIST["invalid_product"])
 
 
+# ========================= МЕТОД ПОИСКА =============================
+async def product_search(message: types.Message, state: FSMContext):
+	"""
+	Осуществляет поиск продукта по названию. Если находит подходящий выводит его.
+	В случае если продукт не найден сообщает об этом клиенту и перекидывает на следующий щаг
+	:param message: types.Message
+	:param state: FSMContext
+	:return:
+	"""
+	await message.answer(INFO_LIST["search_in_progress"])
+	products = Product.select().where(Product.product_name == message.text)
+	if not products.exists():
+		await message.answer(INFO_LIST["product_not_exist"])
+		await state.update_data(product_id=0)
+		await message.answer(INFO_LIST["set_count"])
+		await MakeOrder.set_count.set()
+	else:
+		msg = ''
+		for product in products:
+			msg += f'{product.id} - {product.product_name}\n'
+		await message.answer(msg)
+
+
+# ========================= УКАЗАНИЕ КОЛИЧЕСТВА ПРОДУКТА =============================
 @dp.message_handler(state=MakeOrder.set_count)
 async def set_count(message: types.Message, state: FSMContext):
+	"""
+
+	:param message: types.Message
+	:param state: FSMContext
+	:return:
+	"""
 	try:
-		product_count = int(message.text)
+		product_count = re.search(re_num, message.text)
 		if not product_count:
+			await message.answer(ERROR_LIST["fail_count"])
+		elif not int(product_count[0]):
 			raise BotExceptions.ZeroCount
-		await state.update_data(count=product_count)
-		calendar, step = DetailedTelegramCalendar().build()
-		await message.answer(INFO_LIST["set_limit"], reply_markup=calendar)
-		await MakeOrder.set_deadline.set()
+		else:
+			await state.update_data(count=product_count[0])
+			calendar, step = DetailedTelegramCalendar().build()
+			await message.answer(INFO_LIST["set_limit"], reply_markup=calendar)
+			await MakeOrder.set_deadline.set()
+
 	except BotExceptions.ZeroCount:
 		await message.answer(ERROR_LIST["zero_count"])
-	except ValueError:
-		await message.answer(ERROR_LIST["fail_count"])
 
 
+# ========================= УСТАНОВКА КРАЙНЕГО СРОКА =============================
 @dp.callback_query_handler(DetailedTelegramCalendar.func(), state=MakeOrder.set_deadline)
 async def set_date(call: CallbackQuery, state: FSMContext):
+	"""
+	Устанавливает крайний срок доставки товара при помощи inline клавиатуры
+	:param call: CallbackQuery
+	:param state: FSMContext
+	:return:
+	"""
 	result, key, step = DetailedTelegramCalendar().process(call.data)
 	if not result and key:
 		await bot.edit_message_text(INFO_LIST["set_limit"], call.message.chat.id, call.message.message_id, reply_markup=key)
@@ -69,8 +105,15 @@ async def set_date(call: CallbackQuery, state: FSMContext):
 		await MakeOrder.add_comment.set()
 
 
+# ========================= ДОБАВЛЕНИЕ КОМЕНТАРИЯ К ЗАЯВКЕ =============================
 @dp.message_handler(state=MakeOrder.add_comment)
 async def add_comment(message: types.Message, state: FSMContext):
+	"""
+
+	:param message: types.Message
+	:param state: FSMContext
+	:return:
+	"""
 	comment = message.text
 	await state.update_data(comment=comment)
 	data = await state.get_data()
