@@ -101,8 +101,23 @@ async def set_date(call: CallbackQuery, state: FSMContext):
 		await bot.edit_message_text(INFO_LIST["deadline_set"], call.message.chat.id, call.message.message_id)
 		deadline = datetime(result.year, result.month, result.day)
 		await state.update_data(period=deadline)
-		await call.message.answer(INFO_LIST["add_comment"])
-		await MakeOrder.add_comment.set()
+		await call.message.answer(INFO_LIST["set_location"])
+		await MakeOrder.set_location.set()
+
+
+# ========================= УКАЗАНИЕ АДРЕСА ДОСТАВКИ =============================
+@dp.message_handler(state=MakeOrder.set_location)
+async def set_location(message: types.Message, state: FSMContext):
+	"""
+
+	:param message: types.Message
+	:param state: FSMContext
+	:return:
+	"""
+	location = message.text
+	await state.update_data(location=location)
+	await message.answer(INFO_LIST["add_comment"])
+	await MakeOrder.add_comment.set()
 
 
 # ========================= ДОБАВЛЕНИЕ КОМЕНТАРИЯ К ЗАЯВКЕ =============================
@@ -125,6 +140,7 @@ async def add_comment(message: types.Message, state: FSMContext):
 		'period': data["period"],
 		'count': data["count"],
 		'comment': data["comment"],
+		'location': data["location"],
 	}
 
 	try:

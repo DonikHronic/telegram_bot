@@ -98,6 +98,7 @@ class Order(BaseModel):
 	period = DateTimeField()
 	product = ForeignKeyField(Product)
 	status = ForeignKeyField(Status)
+	location = CharField()
 	refuse = BooleanField(default=False)
 
 	def add_order(self, params: dict):
@@ -115,6 +116,7 @@ class Order(BaseModel):
 			period=params['period'],
 			product=product.id,
 			status=status,
+			location=params['location']
 		)
 
 		return order
@@ -134,4 +136,4 @@ class SecretKey(BaseModel):
 
 
 if __name__ == '__main__':
-	db.create_tables([User, Client, Buyer, Order, Product, Status, History, SecretKey], safe=True)
+	db.create_tables([User, Client, Buyer, Order, Product, Status, History, SecretKey])
