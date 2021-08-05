@@ -58,8 +58,8 @@ async def client_surname(message: types.Message, state: FSMContext):
 	surname = message.text
 	bot_logger.debug(f'Surname: {surname}')
 	await state.update_data(surname=surname)
-	await message.answer(INFO_LIST["set_patronymic"])
-	await Registration.patronymic.set()
+	await message.answer(INFO_LIST["set_phone"])
+	await Registration.number.set()
 
 
 @dp.message_handler(state=Registration.patronymic)
@@ -75,12 +75,46 @@ async def client_patronymic(message: types.Message, state: FSMContext):
 async def phone_handler(message: types.Message, state: FSMContext):
 	phone = message.text
 	bot_logger.debug(f'Phone: {phone}')
-	if re.search(re_phone, phone):
-		await state.update_data(phone=phone)
-		await message.answer(INFO_LIST["set_email"])
-		await Registration.email.set()
-	else:
+	if not re.search(re_phone, phone):
 		await message.answer(WARNING_LIST["invalid_number"])
+	else:
+		data = await state.get_data()
+		user = User()
+		user_params = {
+			'name': message.from_user.username,
+			'id_user': message.from_user.id,
+			'email': '-',
+			'phone': phone
+		}
+
+		person_params = {
+			'username': message.from_user.username,
+			'name': data['name'],
+			'surname': data['surname'],
+			'patronymic': '-'
+		}
+
+		try:
+			user.add_new_user(user_params)
+
+			if 'client' in data['role']:
+				client = Client()
+				client.add_person(person_params)
+			else:
+				buyer = Buyer()
+				buyer.add_person(person_params)
+				user = User()
+				id_user = user.get(User.user_id == message.from_user.id)
+				key = SecretKey.update(buyer=id_user.id).where(SecretKey.key == data['secret_key'])
+				key.execute()
+		except Exception as ex:
+			bot_logger.exception(ex)
+			await message.answer(ERROR_LIST["fail_registration"])
+			await state.finish()
+			return
+
+		await message.answer(f'{SUCCESS_LIST["success_registration"]}!\n{INFO_LIST["show_actions"]}')
+		await state.finish()
 
 
 @dp.message_handler(state=Registration.email)
@@ -125,6 +159,5 @@ async def email_handler(message: types.Message, state: FSMContext):
 			await state.finish()
 			return
 
-		await state.update_data(email=email)
 		await message.answer(f'{SUCCESS_LIST["success_registration"]}!\n{INFO_LIST["show_actions"]}')
 		await state.finish()

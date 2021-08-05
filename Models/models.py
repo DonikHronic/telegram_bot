@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from peewee import *
 from config import DB_PATH
 from loader import bot_logger
@@ -82,8 +84,10 @@ class Product(BaseModel):
 
 class Status(BaseModel):
 	STATUS_LIST = [
-		('accepted', 'Принята'),
-		('in_process', 'В процессе'),
+		('dont_accepted', 'Еще не принята'),
+		('accepted', 'Принята поставщиком'),
+		('in_process', 'В процессе закупа'),
+		('preparing_for_shipment', 'Подготовка к отправке'),
 		('sent', 'Отправлена'),
 		('complete', 'Завершён'),
 	]
@@ -96,6 +100,7 @@ class Order(BaseModel):
 	comment = CharField()
 	count = IntegerField()
 	period = DateTimeField()
+	change_date = DateTimeField()
 	product = ForeignKeyField(Product)
 	status = ForeignKeyField(Status)
 	location = CharField()
@@ -104,7 +109,7 @@ class Order(BaseModel):
 	def add_order(self, params: dict):
 		user_id = User.get(User.user_id == params['client_id'])
 		client = Client.get(Client.user == user_id)
-		buyer = Buyer.get(Buyer.id == 1)
+		buyer = Buyer.get(Buyer.id == 2)
 		product = Product.get(Product.id == params['product_id'])
 		status = Status.get(Status.status_name == Status.STATUS_LIST[0][1])
 
@@ -114,6 +119,7 @@ class Order(BaseModel):
 			comment=params['comment'],
 			count=params['count'],
 			period=params['period'],
+			change_date=datetime.now(),
 			product=product.id,
 			status=status,
 			location=params['location']

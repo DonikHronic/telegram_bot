@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery
 from telegram_bot_calendar import DetailedTelegramCalendar
 
 from Exceptions.ecxeptions import BotExceptions
-from Models.models import Product, Order
+from Models.models import Product, Order, User, Buyer
 from commands import INFO_LIST, WARNING_LIST, ERROR_LIST, SUCCESS_LIST
 from loader import dp, bot, bot_logger
 from states.make_order import MakeOrder
@@ -145,6 +145,10 @@ async def add_comment(message: types.Message, state: FSMContext):
 
 	try:
 		order.add_order(params)
+		buyers = Buyer().select()
+		for buyer in buyers:
+			await bot.send_message(buyer.user.user_id, INFO_LIST["new_order"])
+
 		await message.answer(SUCCESS_LIST["order_added"])
 		await state.finish()
 	except Exception as ex:

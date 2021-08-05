@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -11,9 +12,9 @@ from Keyboards.inline.callback_datas import buyer_order_show
 from Keyboards.inline.confirm_button import check_confirm
 from Keyboards.inline.show_orders_button import show_orders_btn
 from Keyboards.inline.statuses import statuses
-from Models.models import Order, Status
+from Models.models import Order, Status, Client, User
 from commands import MENU_COMMANDS, INFO_LIST, WARNING_LIST, SUCCESS_LIST, ERROR_LIST
-from loader import dp, bot_logger
+from loader import dp, bot_logger, bot
 from states.change_status import ChangeStatus
 
 
@@ -46,6 +47,8 @@ async def show_all_orders(call: CallbackQuery):
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					Адрес доставки: {order.location}
+					Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 					\n{"":=<25}\n\n
 				'''
 		await call.message.answer(msg)
@@ -56,7 +59,7 @@ async def show_all_orders(call: CallbackQuery):
 		bot_logger.exception(ex)
 
 
-# ========================= ФИЛТРАЦИЯ ЗАВЕРШЁННЫХ ЗАЯВОК =============================
+# ========================= ФИЛЬТРАЦИЯ ЗАВЕРШЁННЫХ ЗАЯВОК =============================
 @dp.callback_query_handler(buyer_order_show.filter(order='complete'))
 async def show_complete_orders(call: CallbackQuery):
 	"""
@@ -67,12 +70,14 @@ async def show_complete_orders(call: CallbackQuery):
 	await call.answer(cache_time=60)
 	try:
 		msg = ''
-		orders = Order.select().join(Status).where(Status.status_name == Status.STATUS_LIST[3][1])
+		orders = Order.select().join(Status).where(Status.status_name == Status.STATUS_LIST[-1][1])
 		for order in orders:
 			msg += f'''{order.id} - {order.product.product_name}
 				Количество: {order.count}
 				Статус: {order.status.status_name}
 				Комментарий: {order.comment}
+				Адрес доставки: {order.location}
+				Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 				\n{"":=<25}\n\n
 			'''
 		await call.message.answer(msg)
@@ -83,27 +88,32 @@ async def show_complete_orders(call: CallbackQuery):
 		bot_logger.exception(ex)
 
 
-# ========================= ФИЛТРАЦИЯ НОВЫХ ЗАЯВОК =============================
+# ========================= ФИЛЬТРАЦИЯ НОВЫХ ЗАЯВОК =============================
 @dp.callback_query_handler(buyer_order_show.filter(order='new'))
 async def show_complete_orders(call: CallbackQuery):
 	"""
-	Выводит все заявки со статусом: Принята
+	Выводит все заявки со статусом: Еще не принята
 	:param call: CallbackQuery
 	:return:
 	"""
 	await call.answer(cache_time=60)
 	try:
 		msg = ''
-		orders = Order.select().join(Status).where(Status.status_name == Status.STATUS_LIST[0][1] and Order.refuse == False)
+		orders = Order.select().join(Status).where(Status.status_name == Status.STATUS_LIST[0][1])
 		for order in orders:
-			msg += f'''{order.id} - {order.product.product_name}
-				Количество: {order.count}
-				Статус: {order.status.status_name}
-				Комментарий: {order.comment}
-				\n{"":=<25}\n\n
-			'''
+			if not order.refuse:
+				msg += f'''{order.id} - {order.product.product_name}
+					Количество: {order.count}
+					Статус: {order.status.status_name}
+					Комментарий: {order.comment}
+					Адрес доставки: {order.location}
+					Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
+					\n{"":=<25}\n\n
+				'''
 		await call.message.answer(msg)
 	except MessageTextIsEmpty:
+		await call.message.answer(WARNING_LIST["not_have_orders"])
+	except DoesNotExist:
 		await call.message.answer(WARNING_LIST["not_have_orders"])
 	except Exception as ex:
 		await call.message.answer(ERROR_LIST['general_fail'])
@@ -120,12 +130,14 @@ async def orders_history(message: types.Message):
 	"""
 	try:
 		msg = ''
-		orders = Order.select().join(Status).where(Status.status_name == Status.STATUS_LIST[3][1])
+		orders = Order.select().join(Status).where(Status.status_name == Status.STATUS_LIST[-1][1])
 		for order in orders:
 			msg += f'''{order.id} - {order.product.product_name}
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					Адрес доставки: {order.location}
+					Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 					\n{"":=<25}\n\n
 				'''
 		await message.answer(msg, reply_markup=ReplyKeyboardRemove())
@@ -152,6 +164,8 @@ async def refused_orders(message: types.Message):
 						Количество: {order.count}
 						Статус: {order.status.status_name}
 						Комментарий: {order.comment}
+						Адрес доставки: {order.location}
+						Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 						\n{"":=<25}\n\n
 					'''
 		await message.answer(msg, reply_markup=ReplyKeyboardRemove())
@@ -174,6 +188,8 @@ async def change_status(message: types.Message):
 						Количество: {order.count}
 						Статус: {order.status.status_name}
 						Комментарий: {order.comment}
+						Адрес доставки: {order.location}
+						Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 						\n{"":=<25}\n\n
 					'''
 		await message.answer(msg, reply_markup=ReplyKeyboardRemove())
@@ -224,8 +240,16 @@ async def checks_confirm(call: CallbackQuery, state: FSMContext):
 		data = await state.get_data()
 		status_id = Status.get(Status.status_name == data["status"])
 		try:
-			order = Order.update({Order.status: status_id}).where(Order.id == data["order_id"])
-			order.execute()
+			updated_order = Order.update({Order.status: status_id, Order.change_date: datetime.now()}).where(
+				Order.id == data["order_id"]
+			)
+			updated_order.execute()
+			order = Order.get_by_id(data["order_id"])
+			user = User().select().join(Client).where(Client.id == order.client).get()
+			await bot.send_message(
+				user.user_id,
+				INFO_LIST["status_changed"].format(order.product.product_name, data["status"])
+			)
 			await call.message.answer(SUCCESS_LIST["change_success"])
 			await state.finish()
 		except Exception as ex:

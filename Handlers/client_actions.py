@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -7,9 +8,9 @@ from aiogram.utils.exceptions import MessageTextIsEmpty
 from peewee import DoesNotExist
 
 from Keyboards.inline.confirm_button import confirm, check_confirm
-from Models.models import Product, User, Order, Client, Status
+from Models.models import Product, User, Order, Client, Status, Buyer
 from commands import MENU_COMMANDS, INFO_LIST, ERROR_LIST, WARNING_LIST
-from loader import dp, bot_logger
+from loader import dp, bot_logger, bot
 from states.confirmation import Confirmation
 from states.make_order import MakeOrder
 from states.refusing_order import Refusing
@@ -41,12 +42,13 @@ async def my_orders(message: types.Message):
 		msg = ''
 		orders_for_confirm = []
 		for order in orders:
-			if order.status.status_name not in Status.STATUS_LIST[2][1]:
+			if order.status.status_name not in Status.STATUS_LIST[-2][1]:
 				msg += f'''
 					{order.id} - {order.product.product_name}
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 					\n{"":=<25}\n\n
 				'''
 			else:
@@ -55,10 +57,12 @@ async def my_orders(message: types.Message):
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 				'''
 				orders_for_confirm.append(mess)
 
-		await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
+		if msg:
+			await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
 
 		for order in orders_for_confirm:
 			await message.answer(order, reply_markup=confirm)
@@ -77,11 +81,12 @@ async def refuse_order(message: types.Message):
 		orders = Order.select().where(Order.client == client.id, Order.refuse == 0)
 		msg = ''
 		for order in orders:
-			if order.status.status_name not in (Status.STATUS_LIST[2][1], Status.STATUS_LIST[3][1]):
+			if order.status.status_name in (Status.STATUS_LIST[0][1], Status.STATUS_LIST[1][1]):
 				msg += f'''{order.id} - {order.product.product_name}
 					Количество: {order.count}
 					Статус: {order.status.status_name}
 					Комментарий: {order.comment}
+					Дата изменения: {order.change_date.strftime('%d-%m-%Y, %H:%M')}
 					\n{"":=<25}\n\n
 				'''
 		await message.answer(msg, reply_markup=types.ReplyKeyboardRemove())
@@ -149,8 +154,14 @@ async def confirm_order(call: CallbackQuery, state: FSMContext):
 async def yes_confirm(call: CallbackQuery, state: FSMContext):
 	data = await state.get_data()
 	order_id = int(data["order"][0])
-	order = Order.update({Order.status: 4}).where(Order.id == order_id)
-	order.execute()
+	updated_order = Order.update({Order.status: 6, Order.change_date: datetime.now()}).where(Order.id == order_id)
+	updated_order.execute()
+	order = Order.get_by_id(order_id)
+	user = User().select().join(Buyer).where(Buyer.id == order.buyer).get()
+	await bot.send_message(
+		user.user_id,
+		INFO_LIST["request_completed"].format(order.product.product_name, order.change_date.strftime('%d-%m-%Y, %H:%M'))
+	)
 	await call.message.answer(INFO_LIST['confirmed'])
 	await state.finish()
 
